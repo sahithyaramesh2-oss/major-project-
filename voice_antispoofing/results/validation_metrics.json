@@ -1,0 +1,54 @@
+{
+    "evaluation_type": "80/20 stratified holdout from training dataset",
+    "dataset": "ASVspoof 2017 V2 training split",
+    "training_samples": 2411,
+    "validation_samples": 603,
+    "threshold_for_far_frr": 0.5,
+    "accuracy": 0.9800995024875622,
+    "roc_auc": 0.9978548326769489,
+    "far_spoof_accepted_as_genuine": 0.006644518272425249,
+    "frr_genuine_rejected_as_spoof": 0.033112582781456956,
+    "eer_approximate": 0.021556181382147818,
+    "eer_threshold_approximate": 0.585,
+    "confusion_matrix_labels": [
+        "genuine",
+        "spoof"
+    ],
+    "confusion_matrix": [
+        [
+            292,
+            10
+        ],
+        [
+            2,
+            299
+        ]
+    ],
+    "classification_report": {
+        "genuine": {
+            "precision": 0.9931972789115646,
+            "recall": 0.9668874172185431,
+            "f1-score": 0.9798657718120806,
+            "support": 302.0
+        },
+        "spoof": {
+            "precision": 0.9676375404530745,
+            "recall": 0.9933554817275747,
+            "f1-score": 0.980327868852459,
+            "support": 301.0
+        },
+        "accuracy": 0.9800995024875622,
+        "macro avg": {
+            "precision": 0.9804174096823195,
+            "recall": 0.9801214494730589,
+            "f1-score": 0.9800968203322697,
+            "support": 603.0
+        },
+        "weighted avg": {
+            "precision": 0.9804386034953034,
+            "recall": 0.9800995024875622,
+            "f1-score": 0.9800964371672279,
+            "support": 603.0
+        }
+    }
+}
