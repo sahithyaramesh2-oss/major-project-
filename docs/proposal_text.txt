@@ -1,0 +1,220 @@
+RESEARCH PROJECT PROPOSAL
+Risk-Adaptive, Privacy-PreservingFace–Voice Biometric Authentication
+Using Attack-Conditioned Temporal Multimodal Challenge Generation
+Proposed system architecture, algorithms, workflow,research contribution and evaluation plan
+Research planning document
+1. Project Overview
+The proposed project develops a risk-adaptive, privacy-preserving biometric authentication system that verifies a user's identity through face and voice while assessing whether the responses come from a live person responding to a fresh challenge. The system combines biometric matching, presentation-attack detection, audio–visual temporal consistency, quality-aware fusion and evidence-conditioned challenge escalation.
+The central research idea is to select a follow-up challenge according to suspicious or inconclusive evidence observed during the current authentication attempt, rather than relying only on a fixed or random challenge sequence.
+2. Problem Statement
+Conventional face–voice authentication can verify whether captured biometric samples resemble registered templates, but matching alone does not prove that the samples originate from a live person or from the same live event. Printed photographs, screen replays, replayed audio, synthetic speech, manipulated video and coordinated audio–video replays may threaten the authentication process. Input quality can also vary because of lighting, camera angle, background noise and speaking conditions.
+The project aims to combine identity verification with liveness, temporal consistency and adaptive challenge-response so that the system can make a better-informed accept, step-up or reject decision.
+3. Project Objectives
+Verify identity using face and voice biometric embeddings.
+Assess face and audio liveness to identify selected presentation and replay attacks.
+Measure whether facial movement, spoken content and challenge timing are temporally consistent.
+Estimate input quality and use it to adjust modality reliability during score fusion.
+Develop an attack-conditioned policy that selects a targeted follow-up challenge based on current evidence.
+Make risk-based authentication decisions: accept, request another challenge, or reject.
+Protect biometric templates and minimize unnecessary retention of raw audio and video.
+Evaluate security, usability and performance against fixed and random challenge baselines.
+4. Proposed System Features and Modules
+Module 1 — Face identity verification
+Detect and align the face; extract embeddings using InsightFace/ArcFace; compare the captured embedding with the registered template using cosine similarity.
+Module 2 — Voice identity verification
+Extract speaker embeddings using SpeechBrain ECAPA-TDNN; compare against the registered voice template; use speech recognition to verify the spoken challenge phrase.
+Module 3 — Multimodal liveness detection
+Use a face presentation-attack-detection model and an audio anti-spoofing model to assess selected photo, video replay, audio replay and synthetic-media attacks.
+Module 4 — Cross-modal temporal consistency
+Compare visible mouth movement with speech timing; verify that requested facial actions occur in the expected order and time window; assess audio–video synchronization.
+Module 5 — Attack-Conditioned Temporal Multimodal Challenge Generation (ATMCG)
+Generate a fresh voice-and-face challenge; analyse evidence from the response; select a targeted second challenge when evidence is suspicious or inconclusive; limit escalation rounds.
+Module 6 — Risk-adaptive decision and privacy
+Combine calibrated identity, liveness, synchronization, challenge-compliance and quality evidence; decide accept, step-up or reject; encrypt templates and apply access and retention controls.
+5. Proposed System Workflow
+Registration: capture consented face and voice samples, extract biometric templates and store them securely.
+Initial challenge generation: create a fresh, unpredictable phrase and one or more facial actions with an expected event order.
+Audio–video capture: record the response with timestamps and associate it with the current challenge nonce.
+Parallel face and voice processing: extract embeddings, calculate identity scores and estimate modality quality.
+Liveness analysis: run face PAD and audio anti-spoofing models.
+Temporal verification: assess lip–speech synchronization, requested movement timing and challenge compliance.
+Evidence aggregation: construct an evidence vector containing identity, liveness, quality, synchronization and compliance results.
+Risk estimation: estimate the probability or level of attack using a calibrated model.
+Decision: accept when identity and security conditions pass; reject when strong spoof evidence or high risk is present; otherwise request a targeted follow-up challenge.
+Step-up verification: capture and analyse the new response, update the evidence and make the final decision.
+6. Proposed Algorithms and Models
+Task
+Recommended model / method
+Role
+Face recognition
+InsightFace / ArcFace
+Face embeddings and identity matching
+Voice recognition
+SpeechBrain ECAPA-TDNN
+Speaker embeddings and identity matching
+Face landmarks
+MediaPipe Face Mesh
+Eye, mouth and head movement tracking
+Face liveness
+Pretrained MiniFASNet or another validated face PAD model
+Detect selected face presentation attacks
+Audio anti-spoofing
+Pretrained AASIST or RawNet2
+Detect replay or synthetic audio patterns
+Speech recognition
+Whisper
+Transcribe and verify the challenge phrase
+Audio–visual synchronization
+SyncNet-style model plus event timestamps
+Assess correspondence between speech and lip movement
+Quality assessment
+Blur, brightness, pose, SNR and clipping measures
+Estimate input reliability
+Score fusion
+Calibrated quality-aware weighted fusion
+Combine face and voice identity scores
+Challenge selection
+Rule-based evidence-conditioned policy initially
+Choose the next targeted challenge
+Risk estimation
+Calibrated logistic regression; compare XGBoost later
+Estimate attack risk and support decisions
+7. Core Mathematical Components
+7.1 Identity similarity
+Cosine similarity can be used to compare a captured embedding E with a registered template T:
+S = (E · T) / (||E|| ||T||)
+Compute separate face and voice scores. Calibrate or normalize them using development data before combining them; raw cosine scores from different models should not automatically be treated as comparable.
+7.2 Quality-aware score fusion
+Let Rf and Rv denote calibrated face and voice reliability estimates. A simple initial weighting is:
+wf = Rf / (Rf + Rv + ε);     wv = Rv / (Rf + Rv + ε)
+Sfusion = wf × Sf + wv × Sv
+Reliability should reflect capture quality and model confidence. Low quality must be treated as uncertainty, not automatically as evidence of an attack.
+7.3 Attack-conditioned challenge policy
+The proposed policy selects the next challenge according to the current challenge and the evidence observed from its response:
+c(t+1) = π(e(t), c(t))
+Here c(t) is the current challenge, e(t) is the evidence vector, π is the challenge-selection policy, and c(t+1) is the follow-up challenge. The initial implementation should use an interpretable rule-based policy. A learned policy can be explored only after enough labelled data are available.
+8. ATMCG: Proposed Algorithm
+The following pseudocode describes the initial two-stage design. It is a starting specification, not a validated final implementation.
+def authenticate(user):    face_template, voice_template = load_templates(user)    challenge = generate_fresh_challenge()    response = capture_audio_video(challenge)    face_embedding = extract_face_embedding(response.video)    voice_embedding = extract_voice_embedding(response.audio)    face_score = compare(face_embedding, face_template)    voice_score = compare(voice_embedding, voice_template)    face_pad = detect_face_spoof(response.video)    audio_pad = detect_audio_spoof(response.audio)    face_quality = assess_face_quality(response.video)    voice_quality = assess_voice_quality(response.audio)    av_sync = check_audio_video_sync(response)    compliance = verify_challenge(response, challenge)    evidence = build_evidence(        face_score, voice_score,        face_pad, audio_pad,        face_quality, voice_quality,        av_sync, compliance    )    risk = calibrated_risk_model(evidence)    if strong_spoof_evidence(evidence) or risk >= REJECT_THRESHOLD:        return REJECT    if identity_passes(evidence) and risk <= ACCEPT_THRESHOLD:        return ACCEPT    next_challenge = select_targeted_challenge(evidence)    second_response = capture_audio_video(next_challenge)    second_evidence = analyse_response(        second_response, next_challenge,        face_template, voice_template    )    second_risk = calibrated_risk_model(second_evidence)    if identity_passes(second_evidence) and second_risk <= ACCEPT_THRESHOLD:        return ACCEPT    return REJECT
+9. Challenge Selection Examples
+Observed evidence
+Possible follow-up challenge
+Voice replay suspicion
+Generate a fresh, unpredictable spoken phrase.
+Synthetic voice suspicion
+Request a new phrase with different phonetic content.
+Face presentation-attack suspicion
+Request a new head movement and eye action.
+Audio–video synchronization suspicion
+Ask the user to speak while performing a timed facial action.
+Incomplete challenge response
+Generate a new sequence with a different event order.
+Poor input quality
+Request improved lighting or clearer audio rather than labelling the attempt an attack.
+Challenges should use a fresh unpredictable nonce, have a short expiry, and be accepted only once. Expected actions and timing should be verified against trusted server-side challenge records. The number of rounds should be limited to control latency and user effort.
+10. Research Gap and Potential Novelty
+The component techniques are established research areas: face–voice fusion, liveness detection, random challenge-response, audio–visual synchronization and reliability-aware fusion have all been studied. Therefore, the project should not claim that these individual features are new.
+The proposed contribution to investigate is a sequential, evidence-conditioned challenge policy that uses modality-specific attack indicators and temporal consistency evidence to select a targeted follow-up face–voice challenge, then updates the risk-based authentication decision.
+Attack-evidence-based selection of follow-up challenges.
+Temporally coordinated face–voice challenge sequences.
+Sequential step-up verification rather than only a one-shot random prompt.
+Joint consideration of identity confidence, modality reliability, spoof evidence and challenge compliance.
+Comparative evaluation against fixed and random challenge strategies.
+Novelty is not yet established. A deeper literature and patent search is required before claiming that the exact mechanism has not been published. Publication suitability will depend on the implemented method, strength of experiments, reproducibility and the target venue.
+11. Experimental Design
+Compare three systems under comparable models, data splits and operating conditions:
+System
+Description
+A — Baseline
+Existing face–voice recognition and fixed score fusion.
+B — Fixed/random challenge
+Face–voice system with a fixed or randomly selected challenge-response procedure.
+C — Proposed ATMCG
+Face–voice system with evidence-conditioned challenge selection and risk-based escalation.
+11.1 Attack scenarios
+Printed photograph presentation attack.
+Video replay presented on a screen.
+Recorded voice replay.
+Synthetic or voice-converted speech.
+Manipulated or deepfake facial video.
+Coordinated audio–video replay.
+Incorrect, delayed or out-of-order challenge responses.
+11.2 Genuine-user conditions
+Different lighting and camera positions.
+Background noise and varied microphone quality.
+Different speaking speeds and natural pauses.
+Glasses, facial movement and moderate head-pose variation where supported.
+Poor-quality input cases to measure unnecessary rejection.
+11.3 Evaluation metrics
+Metric
+Meaning
+Accuracy
+Overall proportion of correct decisions.
+FAR
+Rate at which impostor attempts are accepted.
+FRR
+Rate at which genuine attempts are rejected.
+EER
+Operating point where FAR and FRR are equal.
+APCER
+Rate at which presentation attacks are incorrectly classified as bona fide.
+BPCER
+Rate at which bona fide presentations are incorrectly classified as attacks.
+ACER
+Average of APCER and BPCER.
+Attack success rate
+Proportion of attack attempts that defeat authentication.
+Average latency
+Time required to complete authentication.
+Challenge rounds
+Average number of challenge rounds per attempt.
+The main hypothesis is that ATMCG can reduce attack success and APCER relative to fixed/random challenge strategies while keeping FRR, latency and user effort within acceptable limits. Results must be measured; improvement should not be assumed.
+12. Dataset and Data Collection Strategy
+Data source
+Potential use
+Important limitation
+MSU-AVIS
+Continue the existing face–voice recognition baseline, subject to available labels and protocol.
+A recognition dataset is not automatically a labelled replay/deepfake attack dataset.
+BioVid (2026)
+Explore synchronized speech, audio and lip-motion/passphrase evaluation.
+Do not assume it covers all desired spoof attack types.
+Consented controlled recordings
+Collect genuine challenge responses and simulated replay or challenge attacks.
+Requires consent, secure storage, documented protocols and careful subject-disjoint splits.
+Use subject-disjoint evaluation and, where feasible, attack-method-disjoint testing. Separate training, validation and test subjects. Ensure that attack samples from the test set do not leak into training.
+13. Privacy and Security Design
+Encrypt stored biometric templates using authenticated encryption such as AES-GCM.
+Apply least-privilege access controls to templates and authentication records.
+Avoid retaining raw audio/video after processing unless required for a consented research evaluation.
+Define and enforce a retention and deletion policy for temporary recordings.
+Use fresh, unpredictable, short-lived, single-use challenge nonces.
+Protect challenge state and expected event sequences on the trusted server side.
+Keep audit records without unnecessarily storing raw biometric content.
+Encryption alone does not make a biometric template cancellable. If cancellable biometrics are added, they require a separate transformation and revocation design.
+14. Development Roadmap
+Phase
+Work
+Phase 1 — Baseline
+Preserve the existing InsightFace/ECAPA-TDNN pipeline; reproduce baseline FAR, FRR and EER.
+Phase 2 — Quality and liveness
+Add face and voice quality assessment, face PAD and audio anti-spoofing.
+Phase 3 — Temporal verification
+Add facial landmarks, event timestamps and audio–visual synchronization.
+Phase 4 — ATMCG
+Build challenge library, nonce handling, evidence analysis and rule-based challenge selection.
+Phase 5 — Risk decision
+Train/calibrate risk estimation and tune accept, step-up and reject thresholds on validation data.
+Phase 6 — Evaluation and paper
+Run comparative experiments, analyse errors, report limitations and prepare the manuscript.
+15. Expected Research Contribution
+The intended contribution is an attack-conditioned temporal multimodal challenge-generation and escalation mechanism for face–voice biometric authentication. It will use evidence from identity matching, liveness, input reliability, audio–visual synchronization and challenge compliance to select a targeted follow-up challenge and update the authentication risk.
+The project is a promising research direction, but publishability cannot be guaranteed. A credible paper must establish a precise research gap, implement the proposed mechanism, compare it with appropriate baselines, use sound data splits, report metrics and limitations, and avoid unsupported claims that all deepfakes or attacks are prevented.
+16. Preliminary Related Work to Review
+Challenge-response multimodal authentication (2025, SCPE) — https://scpe.org/index.php/scpe/article/view/4733
+Active Expression-Driven Face Anti-Spoofing with Deep Reinforcement Learning Agents (2026, IEEE) — https://ieeexplore.ieee.org/abstract/document/11547432/
+Adaptive Multimodal Liveness Detection Framework (2026, Springer) — https://link.springer.com/article/10.1007/s44163-026-01911-y
+BioVid dataset and challenge (2026, Springer) — https://link.springer.com/article/10.1007/s00530-026-02647-6
+A Dual-Stream Challenge-Response Protocol for Ocular Liveness Verification (2026, arXiv) — https://arxiv.org/abs/2607.09883
+Reliability-Aware Dynamic Score Fusion for Robust Face–Voice Biometric Identification (2026, MDPI Electronics) — https://www.mdpi.com/journal/electronics
+End of proposal

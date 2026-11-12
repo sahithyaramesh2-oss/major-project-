@@ -1,0 +1,34 @@
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# SQLite fallback & uploads
+backend/fallback.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Environment variables & secrets
+.env
+*.pem
+
+# IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
