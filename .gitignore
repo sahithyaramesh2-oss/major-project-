@@ -23,6 +23,12 @@ backend/fallback.db
 backend/uploads/*
 !backend/uploads/.gitkeep
 
+# Downloaded pretrained model checkpoints are large third-party artifacts.
+# They are fetched locally by the model loaders and should not be committed.
+/pretrained_models/
+/backend/pretrained_models/
+/pytest_voice.log
+
 # Environment variables & secrets
 .env
 *.pem

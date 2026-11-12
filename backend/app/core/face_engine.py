@@ -26,8 +26,8 @@ class FaceEngine:
             self.app.prepare(ctx_id=-1, det_size=(320, 320))
             logger.info("InsightFace engine successfully prepared.")
         except Exception as e:
-            logger.error("Failed to initialize InsightFace engine: %s", e)
-            raise e
+            logger.warning("Failed to initialize InsightFace engine: %s. Will retry on demand.", e)
+            self.app = None
 
     @staticmethod
     def decode_base64_image(image_base64: str) -> np.ndarray:

@@ -15,6 +15,40 @@ This project develops an adaptive, privacy-preserving face–voice biometric aut
 
 ## Current Status: Module 1 Completed & Verified
 
+## Module 2: Voice Identity Verification
+
+### Voice module capabilities
+- SpeechBrain ECAPA-TDNN speaker embedding extraction
+- AES-256-GCM encrypted voice template storage in the same `biometric_templates` table used by face enrollment
+- Cosine-similarity voice verification against an enrolled template
+- Required Whisper-based enrollment and fresh, single-use verification challenge phrase checks
+- Audio validation for empty, corrupted, too-short and unsupported inputs
+- Separate speaker identity, phrase compliance, audio quality, and model-processing outcomes
+- No synthetic fallback embeddings; failed model inference does not produce a biometric score
+
+### Backend endpoints
+- `GET /api/v1/voice/challenge?purpose=enrollment` — returns an expiring enrollment phrase and challenge ID
+- `GET /api/v1/voice/challenge?purpose=verification` — returns an expiring, single-use verification phrase and challenge ID
+- `POST /api/v1/voice/enroll` — accepts audio and a valid enrollment challenge ID; stores only an encrypted ECAPA-TDNN template
+- `POST /api/v1/voice/verify` — checks speaker identity and the server-issued phrase independently
+
+### API and model configuration
+- `VOICE_SIMILARITY_THRESHOLD` controls the identity acceptance threshold
+- `CHALLENGE_MATCH_THRESHOLD` controls word/phrase acceptance for challenge transcription
+- `VOICE_MIN_DURATION_SEC` and `VOICE_MAX_DURATION_SEC` validate audio capture bounds
+- `WHISPER_MODEL_SIZE` controls the transcription model size
+
+### Module 2 workflow
+1. Issue an expiring enrollment/verification phrase and challenge ID.
+2. Validate and preprocess input audio to 16 kHz mono; reject silence, unusable quality, or invalid duration.
+3. Use Whisper to confirm the required enrollment or verification phrase.
+4. Extract and validate a normalized 192-dimensional ECAPA-TDNN embedding; never substitute a synthetic embedding.
+5. Encrypt and store enrollment templates with AES-256-GCM.
+6. During verification, retrieve and decrypt the template, then return speaker identity separately from phrase compliance.
+7. Leave replay detection and final face–voice decisions to their designated modules. The voice module does not claim to detect replay attacks.
+
+Voice similarity thresholds must be calibrated against representative genuine and impostor validation recordings before production use.
+
 ### Implemented Capabilities:
 - **Backend Architecture**: FastAPI with asynchronous endpoints, Pydantic validation, and SQLAlchemy ORM.
 - **Database**: Production MySQL 8.0 server (`biometric_auth` database) with relational schema for users, encrypted templates, and audit logs.

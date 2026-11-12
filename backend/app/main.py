@@ -6,8 +6,10 @@ from app.config import settings
 from app.database import engine, Base
 from app.models import user as user_models
 from app.api.face_routes import router as face_router
+from app.api.voice_routes import router as voice_router
 from app.api.system_routes import router as system_router
 from app.core.face_engine import face_engine
+from app.core.voice_engine import voice_engine
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,10 +24,17 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables initialized successfully.")
     
-    # Pre-warm InsightFace model
+    # Pre-warm InsightFace model (non-blocking - graceful if model files missing)
     logger.info("Pre-warming InsightFace ArcFace models...")
-    _ = face_engine.app
-    logger.info("InsightFace models ready.")
+    try:
+        _ = face_engine.app
+        logger.info("InsightFace models ready.")
+    except Exception as e:
+        logger.warning("InsightFace pre-warm failed (non-fatal): %s", e)
+
+    # Voice models are loaded lazily on first request to avoid blocking startup
+    logger.info("Voice models (ECAPA-TDNN + Whisper) will load on first request if not already cached.")
+    logger.info("Voice model pre-loaded: %s", voice_engine.is_ready())
     
     yield
     logger.info("Shutting down biometric auth service...")
@@ -48,6 +57,7 @@ app.add_middleware(
 
 # Register API v1 routes
 app.include_router(face_router, prefix=settings.API_V1_STR)
+app.include_router(voice_router, prefix=settings.API_V1_STR)
 app.include_router(system_router, prefix=settings.API_V1_STR)
 
 @app.get("/")

@@ -25,6 +25,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
     { id: 'register', label: '1. Registration', icon: UserPlus },
     { id: 'enroll', label: '2. Face Enrollment', icon: ScanFace },
     { id: 'verify', label: '3. Face Verification', icon: CheckCircle2 },
+    { id: 'voice_enroll', label: '4. Voice Enrollment', icon: Cpu },
+    { id: 'voice_verify', label: '5. Voice Verification', icon: ShieldCheck },
     { id: 'dashboard', label: 'Security Dashboard', icon: LayoutDashboard },
   ];
 

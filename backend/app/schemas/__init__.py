@@ -8,3 +8,11 @@ from app.schemas.user import (
     AuthLogResponse,
     SystemStatusResponse,
 )
+from app.schemas.voice import (
+    AudioQualityInfo,
+    VoiceEnrollRequest,
+    VoiceVerifyRequest,
+    VoiceEnrollmentResponse,
+    VoiceVerificationResponse,
+    ChallengePhraseResponse,
+)

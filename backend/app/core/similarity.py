@@ -56,3 +56,36 @@ def evaluate_face_verification(
         "quality_score": round(quality_score, 4),
         "message": message
     }
+
+def evaluate_voice_verification(
+    query_emb: np.ndarray,
+    template_emb: np.ndarray,
+    quality_score: float = 1.0,
+    threshold: float = None
+) -> Dict[str, Any]:
+    """
+    Evaluate voice verification evidence according to ECAPA-TDNN cosine similarity.
+    Per Module 2 scope: outputs structured biometric identity evidence without
+    asserting multimodal risk or anti-spoofing decisions (handled in Modules 3 & 6).
+    """
+    if threshold is None:
+        threshold = settings.VOICE_SIMILARITY_THRESHOLD
+
+    similarity = compute_cosine_similarity(query_emb, template_emb)
+    is_match = similarity >= threshold
+
+    if is_match:
+        decision = "MATCH"
+        message = f"Voice identity verified (Similarity: {similarity:.4f} >= {threshold:.4f})"
+    else:
+        decision = "MISMATCH"
+        message = f"Voice identity mismatch (Similarity: {similarity:.4f} < {threshold:.4f})"
+
+    return {
+        "similarity_score": round(similarity, 4),
+        "threshold": round(threshold, 4),
+        "is_match": bool(is_match),
+        "decision": decision,
+        "quality_score": round(quality_score, 4),
+        "message": message
+    }

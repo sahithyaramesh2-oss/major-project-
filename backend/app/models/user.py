@@ -58,3 +58,14 @@ class AuthLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="auth_logs")
+
+
+class VoiceChallenge(Base):
+    __tablename__ = "voice_challenges"
+
+    challenge_id = Column(String(64), primary_key=True)
+    phrase = Column(String(255), nullable=False)
+    purpose = Column(String(32), nullable=False, default="verification")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    consumed_at = Column(DateTime, nullable=True)

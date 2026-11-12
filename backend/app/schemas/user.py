@@ -71,4 +71,11 @@ class SystemStatusResponse(BaseModel):
     version: str
     database: str
     face_model: str
+    face_model_ready: Optional[bool] = True
+    voice_model: Optional[str] = None
+    whisper_model: Optional[str] = None
+    voice_model_ready: Optional[bool] = False
     models_ready: bool
+    face_similarity_threshold: Optional[float] = None
+    voice_similarity_threshold: Optional[float] = None
+    encryption: Optional[str] = None

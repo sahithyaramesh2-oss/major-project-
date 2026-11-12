@@ -3,6 +3,8 @@ import Navbar from './components/Navbar';
 import RegisterPage from './pages/RegisterPage';
 import FaceEnrollPage from './pages/FaceEnrollPage';
 import FaceVerifyPage from './pages/FaceVerifyPage';
+import VoiceEnrollPage from './pages/VoiceEnrollPage';
+import VoiceVerifyPage from './pages/VoiceVerifyPage';
 import DashboardPage from './pages/DashboardPage';
 
 export default function App() {
@@ -17,6 +19,11 @@ export default function App() {
   const handleEnrollSuccess = (userId) => {
     setSelectedUser(userId);
     setActiveTab('verify');
+  };
+
+  const handleVoiceEnrollSuccess = (userId) => {
+    setSelectedUser(userId);
+    setActiveTab('voice_verify');
   };
 
   return (
@@ -35,6 +42,15 @@ export default function App() {
         )}
         {activeTab === 'verify' && (
           <FaceVerifyPage preselectedUser={selectedUser} />
+        )}
+        {activeTab === 'voice_enroll' && (
+          <VoiceEnrollPage
+            selectedUser={selectedUser}
+            onEnrollSuccess={handleVoiceEnrollSuccess}
+          />
+        )}
+        {activeTab === 'voice_verify' && (
+          <VoiceVerifyPage preselectedUser={selectedUser} />
         )}
         {activeTab === 'dashboard' && (
           <DashboardPage />

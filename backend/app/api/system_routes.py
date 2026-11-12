@@ -5,13 +5,14 @@ import cv2
 from fastapi import APIRouter, HTTPException, Response
 from app.config import settings
 from app.core.face_engine import face_engine
+from app.core.voice_engine import voice_engine
 from app.database import engine
 
 router = APIRouter(prefix="/system", tags=["System & Dataset"])
 
 @router.get("/status")
 def get_system_status() -> Dict[str, Any]:
-    """Check health of the backend, MySQL connection, and InsightFace model."""
+    """Check health of the backend, MySQL connection, and biometric models."""
     db_ok = False
     db_type = "unknown"
     try:
@@ -22,16 +23,23 @@ def get_system_status() -> Dict[str, Any]:
         db_type = f"Error: {e}"
 
     face_model_ok = face_engine.app is not None
+    voice_model_ok = voice_engine.is_ready()
 
     return {
-        "status": "ONLINE" if (db_ok and face_model_ok) else "DEGRADED",
+        "status": "ONLINE" if (db_ok and (face_model_ok or voice_model_ok)) else "DEGRADED",
         "project": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "database": db_type,
         "database_connected": db_ok,
         "face_model": "InsightFace ArcFace (buffalo_l)",
-        "models_ready": face_model_ok,
-        "similarity_threshold": settings.FACE_SIMILARITY_THRESHOLD,
+        "face_model_ready": face_model_ok,
+        "voice_model": "SpeechBrain ECAPA-TDNN (spkrec-ecapa-voxceleb)",
+        "whisper_model": f"OpenAI Whisper ({settings.WHISPER_MODEL_SIZE})",
+        "voice_model_ready": voice_model_ok,
+        "models_ready": face_model_ok and voice_model_ok,
+        "face_similarity_threshold": settings.FACE_SIMILARITY_THRESHOLD,
+        "voice_similarity_threshold": settings.VOICE_SIMILARITY_THRESHOLD,
+        "challenge_threshold": settings.CHALLENGE_MATCH_THRESHOLD,
         "encryption": "AES-256-GCM Authenticated Encryption"
     }
 
