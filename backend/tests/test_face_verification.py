@@ -141,5 +141,32 @@ def test_auth_audit_logs():
     assert "ACCEPT" in decisions
     assert "REJECT" in decisions or "STEP_UP" in decisions
 
+def test_json_base64_face_enroll_and_verify():
+    """Verify that JSON payloads with base64 data URLs enroll and verify correctly."""
+    import cv2
+    import base64
+    dataset_path = Path(settings.DATASET_PATH)
+    frame = face_engine.extract_frame_from_video(str(dataset_path / "Gallery" / "face" / "G_F 1.mp4"))
+    assert frame is not None
+    _, buf = cv2.imencode(".jpg", frame)
+    b64_str = "data:image/jpeg;base64," + base64.b64encode(buf.tobytes()).decode()
+
+    # JSON enrollment
+    r_enroll = client.post("/api/v1/face/enroll", json={
+        "user_id": "test_json_user",
+        "image_base64": b64_str
+    })
+    assert r_enroll.status_code == 200, r_enroll.text
+    assert r_enroll.json()["status"] == "ENROLLED"
+
+    # JSON verification
+    r_verify = client.post("/api/v1/face/verify", json={
+        "user_id": "test_json_user",
+        "image_base64": b64_str
+    })
+    assert r_verify.status_code == 200, r_verify.text
+    assert r_verify.json()["is_match"] is True
+    assert r_verify.json()["decision"] == "ACCEPT"
+
 if __name__ == "__main__":
     pytest.main(["-v", "-s", __file__])

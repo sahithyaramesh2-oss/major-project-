@@ -3,7 +3,7 @@ import uuid
 import json
 from datetime import datetime
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Body, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -90,39 +90,46 @@ def list_users(db: Session = Depends(get_db)):
 
 @router.post("/face/enroll", response_model=EnrollmentResponse)
 async def enroll_face(
-    user_id: str = Form(None),
-    file: Optional[UploadFile] = File(None),
-    json_data: Optional[FaceEnrollRequest] = None,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
     Enroll a user's face template.
-    Accepts either an uploaded image/video file or a base64 webcam snapshot.
+    Accepts either an uploaded image/video file (multipart/form-data) or a base64 webcam snapshot (JSON).
     The extracted 512-d ArcFace embedding is encrypted with AES-256-GCM before database storage.
     """
-    # Resolve user_id and image source
-    target_user_id = user_id or (json_data.user_id if json_data else None)
+    content_type = request.headers.get("content-type", "")
+    target_user_id = None
+    file = None
+    image_base64 = None
+
+    if "application/json" in content_type:
+        body = await request.json()
+        target_user_id = body.get("user_id")
+        image_base64 = body.get("image_base64")
+    else:
+        form = await request.form()
+        target_user_id = form.get("user_id")
+        file = form.get("file")
+
     if not target_user_id:
         raise HTTPException(status_code=400, detail="User ID is required for enrollment.")
 
     user = db.query(User).filter(User.user_id == target_user_id).first()
     if not user:
-        # Auto-create user if registering directly through enrollment screen
         user = User(user_id=target_user_id, full_name=target_user_id)
         db.add(user)
         db.commit()
         db.refresh(user)
 
-    # Extract image
     img = None
     source_filename = None
-    if file:
-        source_filename = file.filename
+    if file and hasattr(file, "read"):
+        source_filename = getattr(file, "filename", "uploaded_sample.mp4")
         content = await file.read()
-        if file.filename.lower().endswith((".mp4", ".avi", ".mov", ".mkv")):
-            # Save temporary video to extract frame
+        if source_filename.lower().endswith((".mp4", ".avi", ".mov", ".mkv")):
             os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-            tmp_video_path = os.path.join(settings.UPLOAD_DIR, f"temp_{uuid.uuid4().hex}_{file.filename}")
+            tmp_video_path = os.path.join(settings.UPLOAD_DIR, f"temp_{uuid.uuid4().hex}_{source_filename}")
             with open(tmp_video_path, "wb") as f_out:
                 f_out.write(content)
             img = face_engine.extract_frame_from_video(tmp_video_path)
@@ -132,8 +139,8 @@ async def enroll_face(
                 pass
         else:
             img = face_engine.read_image_bytes(content)
-    elif json_data and json_data.image_base64:
-        img = face_engine.decode_base64_image(json_data.image_base64)
+    elif image_base64:
+        img = face_engine.decode_base64_image(image_base64)
         source_filename = "webcam_capture.jpg"
     else:
         raise HTTPException(status_code=400, detail="No image file or webcam frame provided.")
@@ -141,19 +148,16 @@ async def enroll_face(
     if img is None:
         raise HTTPException(status_code=400, detail="Could not read valid image frame.")
 
-    # Detect and extract ArcFace embedding
     try:
         embedding, quality_score, metadata = face_engine.extract_face_embedding(img)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-    # Encrypt embedding using AES-256-GCM
     ciphertext, nonce_hex, tag_hex = encrypt_embedding(
         embedding,
         associated_data=target_user_id.encode("utf-8")
     )
 
-    # Store or update template in database
     existing_template = db.query(BiometricTemplate).filter(
         BiometricTemplate.user_id == target_user_id,
         BiometricTemplate.modality == "face"
@@ -196,9 +200,7 @@ async def enroll_face(
 
 @router.post("/face/verify", response_model=VerificationResponse)
 async def verify_face(
-    user_id: str = Form(None),
-    file: Optional[UploadFile] = File(None),
-    json_data: Optional[FaceVerifyRequest] = None,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -209,7 +211,20 @@ async def verify_face(
     4. Computes cosine similarity and assesses risk-adaptive decision.
     5. Saves full audit log in MySQL.
     """
-    target_user_id = user_id or (json_data.user_id if json_data else None)
+    content_type = request.headers.get("content-type", "")
+    target_user_id = None
+    file = None
+    image_base64 = None
+
+    if "application/json" in content_type:
+        body = await request.json()
+        target_user_id = body.get("user_id")
+        image_base64 = body.get("image_base64")
+    else:
+        form = await request.form()
+        target_user_id = form.get("user_id")
+        file = form.get("file")
+
     if not target_user_id:
         raise HTTPException(status_code=400, detail="User ID is required for verification.")
 
@@ -224,7 +239,6 @@ async def verify_face(
             detail=f"No enrolled face template found for user '{target_user_id}'."
         )
 
-    # Decrypt registered template embedding
     try:
         registered_emb = decrypt_embedding(
             template.encrypted_embedding,
@@ -238,13 +252,13 @@ async def verify_face(
             detail=f"Template decryption / authentication failed: {e}"
         )
 
-    # Process query image
     img = None
-    if file:
+    if file and hasattr(file, "read"):
         content = await file.read()
-        if file.filename.lower().endswith((".mp4", ".avi", ".mov", ".mkv")):
+        filename = getattr(file, "filename", "query.mp4")
+        if filename.lower().endswith((".mp4", ".avi", ".mov", ".mkv")):
             os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-            tmp_video_path = os.path.join(settings.UPLOAD_DIR, f"temp_{uuid.uuid4().hex}_{file.filename}")
+            tmp_video_path = os.path.join(settings.UPLOAD_DIR, f"temp_{uuid.uuid4().hex}_{filename}")
             with open(tmp_video_path, "wb") as f_out:
                 f_out.write(content)
             img = face_engine.extract_frame_from_video(tmp_video_path)
@@ -254,15 +268,14 @@ async def verify_face(
                 pass
         else:
             img = face_engine.read_image_bytes(content)
-    elif json_data and json_data.image_base64:
-        img = face_engine.decode_base64_image(json_data.image_base64)
+    elif image_base64:
+        img = face_engine.decode_base64_image(image_base64)
     else:
         raise HTTPException(status_code=400, detail="No query image provided.")
 
     if img is None:
         raise HTTPException(status_code=400, detail="Could not read valid query image frame.")
 
-    # Extract query ArcFace embedding
     try:
         query_emb, query_quality, metadata = face_engine.extract_face_embedding(img)
     except ValueError as e:
