@@ -1,0 +1,23 @@
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.tmp
+*.temp
+*.log
+*.swp
+.ipynb_checkpoints/
+
+# Downloaded datasets, extracted frames, feature caches, and generated results
+datasets/
+data/
+results/
+*.npz
+*.pkl
+*.joblib

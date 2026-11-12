@@ -1,0 +1,12 @@
+{
+  "dataset_root": "datasets/original",
+  "client_dataset_root": "datasets/client",
+  "frames_per_video": 5,
+  "image_size": 128,
+  "lbp_points": 8,
+  "lbp_radius": 1,
+  "random_seed": 42,
+  "smoke_test_subjects": 3,
+  "smoke_test_videos_per_class_subject": 6,
+  "source_url": "https://rose1.ntu.edu.sg/dataset/faceLivenessDetection/"
+}
