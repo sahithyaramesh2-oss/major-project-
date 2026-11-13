@@ -57,8 +57,11 @@ def build_feature_cache(
                     and int(data["image_size"]) == image_size
                     and int(data["frames_per_video"]) == frames_per_video
                 )
-                cached[name] = dict(zip(keys, data["features"]))
         if cache_matches:
+            for name in ("lbp", "hog"):
+                with np.load(cache_path / f"{name}_features.npz") as data:
+                    keys = data["keys"].astype(str)
+                    cached[name] = dict(zip(keys, data["features"]))
             return cached
     result: dict[str, dict[str, np.ndarray]] = {"lbp": {}, "hog": {}}
     import cv2

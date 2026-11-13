@@ -14,7 +14,6 @@ from sklearn.model_selection import GridSearchCV, StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
-from sklearn.metrics import confusion_matrix
 
 from .experiment import _frame_feature_index
 from .metrics import compute_metrics, validation_threshold
@@ -82,7 +81,8 @@ def fit_tuned_svm(
         param_grid=PARAM_GRID,
         scoring="balanced_accuracy",
         cv=splitter,
-        n_jobs=1,
+        n_jobs=4,
+        pre_dispatch=4,
         refit=True,
         error_score="raise",
     )
@@ -141,6 +141,54 @@ def _subject_sort_key(subject_id: str) -> tuple[int, str]:
     return (0, f"{int(subject_id):08d}") if subject_id.isdigit() else (1, subject_id)
 
 
+def _grouped_subject_splits(
+    rows: pd.DataFrame,
+    outer_folds: int = 5,
+) -> list[tuple[list[str], list[str], list[str]]]:
+    """Create test folds and separate grouped validation sets from subjects."""
+    labels = rows["label"].to_numpy(dtype=int)
+    groups = rows["subject_id"].astype(str).to_numpy()
+    subject_count = len(np.unique(groups))
+    if subject_count < 4:
+        raise ValueError("At least four subjects are required for grouped train, validation, and test splits.")
+
+    outer_splitter = StratifiedGroupKFold(
+        n_splits=min(outer_folds, subject_count),
+        shuffle=True,
+        random_state=42,
+    )
+    placeholder_features = np.zeros((len(rows), 1), dtype=np.uint8)
+    splits = []
+    for fold_index, (train_validation_indices, test_indices) in enumerate(
+        outer_splitter.split(placeholder_features, labels, groups=groups)
+    ):
+        train_validation_groups = groups[train_validation_indices]
+        validation_folds = min(4, len(np.unique(train_validation_groups)))
+        validation_splitter = StratifiedGroupKFold(
+            n_splits=validation_folds,
+            shuffle=True,
+            random_state=42 + fold_index,
+        )
+        training_relative_indices, validation_relative_indices = next(
+            validation_splitter.split(
+                placeholder_features[train_validation_indices],
+                labels[train_validation_indices],
+                groups=train_validation_groups,
+            )
+        )
+        training_groups = train_validation_groups[training_relative_indices]
+        validation_groups = train_validation_groups[validation_relative_indices]
+        test_groups = groups[test_indices]
+        splits.append(
+            (
+                sorted(set(training_groups), key=_subject_sort_key),
+                sorted(set(validation_groups), key=_subject_sort_key),
+                sorted(set(test_groups), key=_subject_sort_key),
+            )
+        )
+    return splits
+
+
 def _modal_value(values: pd.Series) -> str:
     counts = Counter(str(value) for value in values)
     highest_count = max(counts.values())
@@ -164,11 +212,7 @@ def run_svm_experiment(
     fold_model_dir.mkdir(parents=True, exist_ok=True)
 
     usable_inventory = inventory.loc[inventory["readable"].astype(bool)].reset_index(drop=True)
-    subjects = sorted(
-        usable_inventory["subject_id"].astype(str).unique(),
-        key=_subject_sort_key,
-    )
-    if len(subjects) < 4:
+    if usable_inventory["subject_id"].astype(str).nunique() < 4:
         raise ValueError(
             "At least four readable subjects are required for independent train, "
             "validation, test, and grouped-CV partitions."
@@ -184,21 +228,24 @@ def run_svm_experiment(
     ]
     if any(video_ids != video_id_sets[0] for video_ids in video_id_sets[1:]):
         raise RuntimeError("LBP, HOG, and combined features do not cover the same videos.")
+    subject_splits = _grouped_subject_splits(feature_data["lbp"][0])
+    subjects = sorted(
+        feature_data["lbp"][0]["subject_id"].astype(str).unique(),
+        key=_subject_sort_key,
+    )
     all_results: list[dict] = []
     all_predictions: list[pd.DataFrame] = []
     all_splits: list[dict] = []
     model_manifest: dict[str, dict] = {}
 
-    for test_index, test_subject in enumerate(subjects):
-        validation_subject = subjects[(test_index + 1) % len(subjects)]
-        train_subjects = [
-            subject for subject in subjects
-            if subject not in {test_subject, validation_subject}
-        ]
+    for fold_index, (train_subjects, validation_subjects, test_subjects) in enumerate(
+        subject_splits,
+        start=1,
+    ):
         for feature_name, (rows, matrix) in feature_data.items():
             train_mask = rows["subject_id"].isin(train_subjects).to_numpy()
-            validation_mask = rows["subject_id"].eq(validation_subject).to_numpy()
-            test_mask = rows["subject_id"].eq(test_subject).to_numpy()
+            validation_mask = rows["subject_id"].isin(validation_subjects).to_numpy()
+            test_mask = rows["subject_id"].isin(test_subjects).to_numpy()
             y_train = rows.loc[train_mask, "label"].to_numpy(dtype=int)
             y_validation = rows.loc[validation_mask, "label"].to_numpy(dtype=int)
             y_test = rows.loc[test_mask, "label"].to_numpy(dtype=int)
@@ -212,8 +259,9 @@ def run_svm_experiment(
                 all_splits.append(
                     {
                         "dataset_name": DATASET_NAME,
-                        "test_subject": test_subject,
-                        "validation_subject": validation_subject,
+                        "outer_fold": fold_index,
+                        "test_subjects": ",".join(test_subjects),
+                        "validation_subjects": ",".join(validation_subjects),
                         "train_subjects": ",".join(train_subjects),
                         "model": model_name,
                         "status": "excluded_missing_class",
@@ -245,8 +293,9 @@ def run_svm_experiment(
                     "dataset_name": DATASET_NAME,
                     "model": model_name,
                     "feature_set": feature_name,
-                    "test_subject": test_subject,
-                    "validation_subject": validation_subject,
+                    "outer_fold": fold_index,
+                    "test_subjects": ",".join(test_subjects),
+                    "validation_subjects": ",".join(validation_subjects),
                     "train_subjects": ",".join(train_subjects),
                     "validation_accuracy": validation_metrics["accuracy"],
                     "threshold": threshold,
@@ -271,8 +320,9 @@ def run_svm_experiment(
             all_splits.append(
                 {
                     "dataset_name": DATASET_NAME,
-                    "test_subject": test_subject,
-                    "validation_subject": validation_subject,
+                    "outer_fold": fold_index,
+                    "test_subjects": ",".join(test_subjects),
+                    "validation_subjects": ",".join(validation_subjects),
                     "train_subjects": ",".join(train_subjects),
                     "model": model_name,
                     "status": "completed",
@@ -288,10 +338,10 @@ def run_svm_experiment(
             )
 
             model_path = fold_model_dir / (
-                f"svm_rbf_face_{feature_name}_test_subject_{test_subject}.pkl"
+                f"svm_rbf_face_{feature_name}_test_fold_{fold_index}.pkl"
             )
             joblib.dump(model, model_path, compress=3)
-            model_manifest[f"{feature_name}:test_subject_{test_subject}"] = {
+            model_manifest[f"{feature_name}:test_fold_{fold_index}"] = {
                 "model_file": f"folds/{model_path.name}",
                 "dataset_name": DATASET_NAME,
                 "classifier": "sklearn.svm.SVC(kernel='rbf')",
@@ -306,8 +356,8 @@ def run_svm_experiment(
                 "score_class": 1,
                 "score_interpretation": "probability of spoof/attack",
                 "train_subjects": train_subjects,
-                "validation_subject": validation_subject,
-                "held_out_test_subject": test_subject,
+                "validation_subjects": validation_subjects,
+                "held_out_test_subjects": test_subjects,
             }
 
     results = pd.DataFrame(all_results)
@@ -342,8 +392,6 @@ def run_svm_experiment(
             "kernel": "rbf",
             "C_initial": 1.0,
             "gamma_initial": "scale",
-            "C_initial": 1.0,
-            "gamma_initial": "scale",
             "class_weight": "balanced",
             "probability": True,
             "random_state": 42,
@@ -351,14 +399,16 @@ def run_svm_experiment(
         "parameter_grid": PARAM_GRID,
         "selection_metric": "balanced_accuracy",
         "cross_validation": "3-fold StratifiedGroupKFold grouped by training subject",
-        "outer_evaluation": "each subject held out once; separate next subject for validation",
-        "threshold_selection": "minimum validation ACER; fixed for corresponding held-out test subject",
+        "outer_evaluation": f"{len(subject_splits)}-fold StratifiedGroupKFold by subject; each subject held out once",
+        "validation_split": "separate grouped validation partition from each outer training set",
+        "threshold_selection": "minimum validation ACER; fixed for corresponding held-out test fold",
         "reported_metrics": "independent held-out test predictions only",
         "evaluation_unit": "video",
         "score_class": 1,
         "class_mapping": CLASS_MAPPING,
         "feature_configuration": active_feature_config,
         "subject_ids": subjects,
+        "outer_folds": int(len(subject_splits)),
         "n_readable_videos": int(len(usable_inventory)),
         "n_usable_videos": int(usable_videos),
         "n_missing_feature_videos": int(len(missing_feature_ids)),

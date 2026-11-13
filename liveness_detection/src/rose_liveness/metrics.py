@@ -19,8 +19,8 @@ def equal_error_rate(y_true: np.ndarray, spoof_scores: np.ndarray) -> float:
     apcer, bpcer = [], []
     for threshold in thresholds:
         predictions = (scores >= threshold).astype(int)
-        apcer.append(float(np.mean(predictions[y == 0] == 1)))
-        bpcer.append(float(np.mean(predictions[y == 1] == 0)))
+        apcer.append(float(np.mean(predictions[y == 1] == 0)))
+        bpcer.append(float(np.mean(predictions[y == 0] == 1)))
     differences = np.asarray(apcer) - np.asarray(bpcer)
     crossings = np.flatnonzero(differences[:-1] * differences[1:] <= 0)
     if not len(crossings):

@@ -1,0 +1,94 @@
+{
+  "dataset_name": "ROSE-Youtu face PAD",
+  "classifier": "Support Vector Machine with RBF kernel",
+  "classifier_parameters": {
+    "kernel": "rbf",
+    "C_initial": 1.0,
+    "gamma_initial": "scale",
+    "class_weight": "balanced",
+    "probability": true,
+    "random_state": 42
+  },
+  "parameter_grid": {
+    "svm__C": [
+      0.1,
+      1,
+      10,
+      100
+    ],
+    "svm__gamma": [
+      "scale",
+      0.001,
+      0.01,
+      0.1
+    ]
+  },
+  "selection_metric": "balanced_accuracy",
+  "cross_validation": "3-fold StratifiedGroupKFold grouped by training subject",
+  "outer_evaluation": "5-fold StratifiedGroupKFold by subject; each subject held out once",
+  "validation_split": "separate grouped validation partition from each outer training set",
+  "threshold_selection": "minimum validation ACER; fixed for corresponding held-out test fold",
+  "reported_metrics": "independent held-out test predictions only",
+  "evaluation_unit": "video",
+  "score_class": 1,
+  "class_mapping": {
+    "0": "genuine/live",
+    "1": "spoof/attack"
+  },
+  "feature_configuration": {
+    "lbp": {
+      "method": "uniform LBP",
+      "points": 8,
+      "radius": 1,
+      "image_size": 128
+    },
+    "hog": {
+      "method": "HOG",
+      "orientations": 9,
+      "pixels_per_cell": [
+        16,
+        16
+      ],
+      "cells_per_block": [
+        2,
+        2
+      ],
+      "block_norm": "L2-Hys",
+      "image_size": 128
+    },
+    "combined": {
+      "features": [
+        "uniform LBP",
+        "HOG"
+      ],
+      "combination": "concatenation"
+    }
+  },
+  "subject_ids": [
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "18",
+    "20",
+    "21",
+    "22",
+    "23"
+  ],
+  "outer_folds": 5,
+  "n_readable_videos": 3137,
+  "n_usable_videos": 3137,
+  "n_missing_feature_videos": 0,
+  "n_genuine_videos": 797,
+  "n_spoof_videos": 2340,
+  "smoke_test": false
+}

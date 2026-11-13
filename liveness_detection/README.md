@@ -1,147 +1,107 @@
-# Face and Voice Liveness Detection System
+# ROSE-Youtu Face Liveness Detection
 
-A liveness-detection project for distinguishing genuine users from spoofing attacks. **The current implementation is a video-based face presentation-attack detection (PAD) pipeline only. Voice/audio liveness detection and face–voice fusion are not implemented.**
+CPU-friendly face presentation attack detection (PAD) using the ROSE-Youtu dataset. The active training pipeline uses a common RBF-kernel SVM for the existing sampled visual texture/gradient features. This project does **not** recognize identity or authenticate voice.
 
-## Current Implementation
+## Dataset and scientific scope
 
-- Face-based genuine-versus-spoof classification using the ROSE-Youtu face liveness dataset.
-- Video preprocessing with uniformly sampled frames and face cropping when the available OpenCV Haar detector finds a face; otherwise, the resized full frame is used and recorded as a fallback.
-- Uniform Local Binary Pattern (LBP) and Histogram of Oriented Gradients (HOG) feature extraction, with separate LBP, HOG, and concatenated-feature experiments.
-- A common scaled Support Vector Machine with an RBF kernel for the available compatible face-feature representations.
-- Subject-disjoint training, validation, and testing, with grouped cross-validation and validation-only decision-threshold selection.
-- Accuracy, precision, recall, F1-score, FAR, FRR, EER, ROC-AUC, APCER, BPCER, ACER, confusion matrices, and ROC-curve evaluation.
-- Plot generation and a standalone HTML dashboard sourced from saved experiment results.
+The official dataset page documents the filename format, attack codes, academic-use terms, and protocols: <https://rose1.ntu.edu.sg/dataset/faceLivenessDetection/>. The original source videos belong under `datasets/original/<subject-id>/`. The project discovers folders dynamically and never changes the source files. `datasets/client/client/rgb/` is an auxiliary processed split from the same face dataset, not a separate modality. Its adaptation list currently contains only bona fide labels and its local test images do not cover the full annotation list, so it is recorded as unavailable for an independent SVM experiment rather than mixed with original-video samples.
 
-Voice liveness, audio features, multimodal fusion, and real-time webcam inference are not part of the current code.
+The refreshed local inventory contains 3,137 face-liveness videos from 18 subjects (797 genuine and 2,340 attacks); all passed the inventory decode check, with no duplicate video IDs. The source remains a partial ROSE-Youtu copy, not the complete official benchmark. No voice-liveness or separate video-liveness dataset is present locally; those modalities remain pending rather than receiving invented metrics.
 
-## Dataset
+The local snapshot may be incomplete. The official intra-dataset protocol requires training subjects 2, 3, 4, 5, 6, 7, 9, 10, 11, and 12 and a held-out test partition. The inspection report records the subjects currently present; the pipeline reports a **preliminary subject-disjoint experiment**, not an official benchmark result, unless the complete authorized split is available.
 
-The implementation uses **ROSE-Youtu Face Liveness Detection** videos. The dataset contains bona fide face recordings and presentation attacks such as printed-photo and display-replay attacks. See the [official dataset page](https://rose1.ntu.edu.sg/dataset/faceLivenessDetection/) for access conditions and the complete dataset description.
+Official filename labels: the first field `G` means genuine (label 0); the documented `Ps`, `Pq`, `Vl`, `Vm`, `Mc`, `Mf`, `Mu`, and `Ml` codes represent attacks (label 1). Unsupported names fail parsing; labels are never guessed.
 
-The locally inventoried snapshot contains **2,622 videos** from 15 subjects: **672 genuine/live** and **1,950 spoof/attack** videos. These are local inventory counts, not counts for the complete official release. The dataset files are not included in this repository; place authorized original videos under `datasets/original/<subject-id>/`. Labels are parsed from the documented ROSE-Youtu filenames rather than inferred.
-
-Preprocessing samples up to five uniformly spaced frames per video, converts them to grayscale, and resizes them to 128 × 128 pixels. Detected faces are cropped with a margin; full-frame fallback is recorded when a face crop is unavailable. The feature pipeline extracts a uniform LBP histogram and a HOG descriptor from each frame, then averages frame descriptors to form one video-level feature vector.
-
-## Model Architecture
+## Structure
 
 ```text
-ROSE-Youtu video
-  → sampled grayscale frames and face-crop/full-frame preprocessing
-  → LBP or HOG feature extraction (or compatible concatenation)
-  → video-level feature aggregation
-  → StandardScaler
-  → SVM (RBF kernel)
-  → genuine/live or spoof/attack prediction
+datasets/
+  original/                 Original videos, unmodified
+  client/                   Auxiliary incomplete ROSE-Youtu RGB split
+  metadata/video_labels.csv Parsed verified labels
+  processed/frames/         Sampled grayscale frames
+  processed/features/       Cached compressed feature matrices
+src/rose_liveness/          Dataset, video, feature, metrics, SVM experiment, reports
+tests/                      Parser, metrics, and SVM pipeline tests
+results/
+  dataset_inventory.csv
+  dataset_inspection.md
+  csv/                      Class counts, splits, frame status, predictions, metrics
+  plots/                    PNG figures
+  tables/model_comparison.md
+  reports/                  Evaluation protocol and paper-ready content
+  svm_rbf/                  Tuned SVM metrics, split manifest, plots, and models
+  dashboard.html            Standalone browser results dashboard
 ```
 
-The classifier is `sklearn.svm.SVC` with `kernel="rbf"`, `class_weight="balanced"`, probability estimates, and a fixed random seed. `StandardScaler` is inside the scikit-learn `Pipeline`. Grid search selects `C` from `[0.1, 1, 10, 100]` and `gamma` from `["scale", 0.001, 0.01, 0.1]` using grouped cross-validation on training subjects only. The validation subject selects the operating threshold; the independent held-out test subject is used for reported test metrics.
+## Technology
 
-This same RBF-SVM family is used for the available LBP, HOG, and combined face features. These are separate feature representations of the same video modality, not voice or other datasets. Separate models are required if future modalities have incompatible feature dimensions.
+Python 3.10+, OpenCV, NumPy, Pandas, scikit-image, scikit-learn, SciPy, Matplotlib, Joblib, tqdm, pytest.
 
-## Performance Evaluation
-
-| Metric | Description |
-|---|---|
-| Accuracy | Overall correct predictions |
-| Precision | Correct positive predictions |
-| Recall | Detection capability |
-| F1-score | Balance between precision and recall |
-| FAR | False Acceptance Rate |
-| FRR | False Rejection Rate |
-| EER | Equal Error Rate |
-| ROC-AUC | Classification performance across score thresholds |
-| APCER | Attack Presentation Classification Error Rate |
-| BPCER | Bona Fide Presentation Classification Error Rate |
-| ACER | Average Classification Error Rate |
-
-No full-dataset independent-test performance values are published here. A small real-data smoke test is available to check the pipeline, but it is not a scientific evaluation and its scores must not be interpreted as benchmark results. Run the full experiment to generate measured fold metrics, CSV/JSON summaries, confusion matrices, ROC plots, and the dashboard under `results/`.
-
-Class 0 is genuine/live and class 1 is spoof/attack. In this implementation, FAR equals APCER and FRR equals BPCER. EER is calculated by sweeping test scores; the operating threshold itself is selected using validation data only.
-
-## Project Structure
-
-```text
-liveness_detection/
-├── .gitignore
-├── README.md
-├── experiment_config.json
-├── main.py
-├── requirements.txt
-├── src/
-│   └── rose_liveness/
-│       ├── cli.py
-│       ├── dashboard.py
-│       ├── dataset.py
-│       ├── experiment.py
-│       ├── features.py
-│       ├── labels.py
-│       ├── metrics.py
-│       ├── plots.py
-│       ├── reports.py
-│       ├── svm_experiment.py
-│       ├── svm_plots.py
-│       ├── video.py
-│       └── __init__.py
-└── tests/
-    ├── test_labels_metrics.py
-    └── test_svm_experiment.py
-```
-
-Downloaded videos, extracted frames, cached features, trained models, and generated result files are intentionally excluded from Git. The source code creates the required runtime directories.
-
-## Installation
-
-From the `liveness_detection/` directory, using Windows PowerShell:
+## Setup (Windows PowerShell)
 
 ```powershell
 py -3.10 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Python 3.10 or a compatible newer version is required. Obtain the dataset from its official source under its applicable terms; do not commit dataset videos.
+The project also works with a compatible installed Python, using that interpreter in place of `py -3.10`.
 
-## How to Run
+## Run
 
-From the `liveness_detection/` directory:
+From the project root:
 
 ```powershell
-# Inspect and verify local video filenames and labels
 python main.py --phase inspect
-
-# Run the end-to-end available-data workflow
-python main.py --phase all
-
-# Or run individual stages
 python main.py --phase preprocess
 python main.py --phase features
 python main.py --phase train
 python main.py --phase plots
 python main.py --phase dashboard
-
-# Run tests
-pytest
+python main.py --phase all
+python main.py --phase all --smoke-test
 ```
 
-The first full run samples frames and extracts features, which can take time and disk space. Later runs reuse valid cached frames and features. For a small pipeline check, use `python main.py --phase all --smoke-test`; smoke-test outputs are not scientific results. The dashboard is written to `results/dashboard.html` after training or dashboard generation. To serve it locally, run `python -m http.server 8000` and open `http://localhost:8000/results/dashboard.html`.
+`inspect` discovers MP4 files, reads media properties, checks the first frame for decodability, writes the full inventory and verified label CSV, and reports class counts. Existing inventory files are refreshed when their video paths no longer match the dataset folders. `preprocess` samples five uniformly spaced frames per video, crops a detected face with a margin when a supported OpenCV Haar API is available, and otherwise retains/logs a resized full-frame fallback. `features` extracts global uniform LBP and HOG descriptors and caches them under `datasets/processed/features/`. `train` and `evaluate` run tuned RBF SVMs separately on LBP, HOG, and combined features. `plots` regenerates test-set figures and the dashboard. `dashboard` regenerates the standalone results page without rerunning training. `all` performs the full available-data workflow.
 
-## Technologies Used
+To view the dashboard, generate it with `python main.py --phase dashboard`, then either open `results/dashboard.html` in a browser or serve the project root and visit `http://localhost:8000/results/dashboard.html`:
 
-- Python
-- OpenCV
-- NumPy and Pandas
-- scikit-image
-- scikit-learn
-- Matplotlib
-- Joblib
-- pytest
+```powershell
+python -m http.server 8000
+```
 
-Streamlit is not used; the dashboard is a standalone HTML page.
+The smoke test samples real videos from four subjects so grouped CV, validation, and testing can use disjoint subject groups. It uses a separate feature cache so it does not replace the full-dataset cache. Its output is a pipeline check only and must not be presented as a scientific evaluation. Cached frames and features allow later commands to resume without repeating preprocessing. Fold models are saved as joblib-compatible `.pkl` files under `results/svm_rbf/models/folds/`.
 
-## Future Improvements
+The dataset inspection and frame-extraction summary record the current local subject coverage, decode failures, and whether face crops or full-frame fallbacks were used. Official benchmark coverage and preprocessing support must be verified from these generated reports; do not infer them from prior runs.
 
-- Add separately sourced and documented voice liveness datasets and audio feature pipelines.
-- Evaluate additional face and video PAD datasets and attack types.
-- Run cross-dataset and official-protocol evaluations when the complete authorized data and splits are available.
-- Investigate multimodal face–voice fusion after compatible modality-specific models are implemented.
-- Explore real-time inference and stronger face/attack detection methods.
+## Evaluation protocol and metrics
+
+The evaluation unit is a video: sampled-frame descriptors are averaged into one video feature vector. Five outer `StratifiedGroupKFold` folds hold each subject out for testing once. Each outer training partition is split again by subject into training and validation groups; `GridSearchCV` tunes C and gamma using three-fold `StratifiedGroupKFold` grouped by training subject, with four bounded parallel search workers. The scaler is inside the SVM `Pipeline`, so every CV scaler is fitted only on its training fold and the final fold estimator is fitted only on outer-training subjects. The operating threshold minimizes validation ACER and is fixed before scoring each held-out test fold. SVM scores are class-1 spoof probabilities. EER is a retrospective test-score threshold sweep, distinct from fixed-threshold test performance. FAR is reported as APCER (attacks accepted as genuine); FRR is BPCER (genuine samples rejected as attacks).
+
+The output includes accuracy, precision, recall, F1, FAR, FRR, EER, ROC-AUC, APCER, BPCER, ACER, and confusion matrices. Figures include ROC, precision-recall, genuine-versus-spoof score distribution, FAR-versus-FRR, and a feature comparison chart. The dashboard compares the three feature representations using fold means and standard deviations, reports the most frequently selected C/gamma, and links to every fold's actual choices and thresholds.
+
+### Measured local experiment
+
+The completed run evaluated 3,137 videos (797 genuine, 2,340 attacks) in five subject-disjoint outer folds for each feature representation. Values below are means over the five independent test folds; C/gamma are the most frequently selected training-only CV values, and the threshold is the mean of the per-fold validation-selected thresholds. FAR equals APCER and FRR equals BPCER under the authentication definitions above.
+
+| Features | Validation accuracy | Test accuracy | Precision | Recall | F1 | FAR / APCER | FRR / BPCER | EER | ROC-AUC | ACER | Modal C / gamma | Mean threshold |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
+| LBP | 0.7678 | 0.7811 | 0.9100 | 0.7863 | 0.8421 | 0.2137 | 0.2441 | 0.2233 | 0.8486 | 0.2289 | 1 / scale | 0.7354 |
+| HOG | 0.9190 | 0.8953 | 0.9631 | 0.8945 | 0.9270 | 0.1055 | 0.1211 | 0.1072 | 0.9592 | 0.1133 | 1 / scale | 0.8625 |
+| Combined LBP+HOG | 0.9146 | 0.8939 | 0.9716 | 0.8840 | 0.9252 | 0.1160 | 0.0963 | 0.1007 | 0.9634 | 0.1062 | 1 / scale | 0.8960 |
+
+These are preliminary results on the locally available partial dataset, not official ROSE-Youtu benchmark results. Per-fold results and thresholds are in `results/svm_rbf/csv/fold_metrics.csv` and `results/svm_rbf/csv/split_manifest.csv`; the fold-mean comparison is in `results/svm_rbf/csv/model_comparison.csv`. No voice or independent video dataset was available for evaluation.
+
+The tuned experiment is written under `results/svm_rbf/`; the prior comparison files and trained models under `results/csv/` and `results/models/` are retained. The `results/dashboard.html` page shows the tuned SVM experiment when its results are available.
+
+## Reproducibility and limitations
+
+Random seeds are fixed. Original videos remain untouched. Subject/video IDs, fold membership, frame fallback status, model settings, and measured predictions are recorded. The lightweight Haar detector, handcrafted descriptors, partial subject set, and small preliminary evaluation limit generalization. Official results require the complete authorized data and published split. Dataset access is governed by the academic release agreement.
+
+Run tests with:
+
+```powershell
+pytest
+```

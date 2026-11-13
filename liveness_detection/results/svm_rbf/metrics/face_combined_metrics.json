@@ -1,0 +1,266 @@
+{
+  "dataset_name": "ROSE-Youtu face PAD",
+  "feature_set": "combined",
+  "classifier": "Support Vector Machine with RBF kernel",
+  "class_mapping": {
+    "0": "genuine/live",
+    "1": "spoof/attack"
+  },
+  "summary": {
+    "dataset_name": "ROSE-Youtu face PAD",
+    "feature_set": "combined",
+    "model": "SVM RBF + COMBINED",
+    "validation_accuracy_mean": 0.9146378565969483,
+    "validation_accuracy_std": 0.012602729381041814,
+    "accuracy_mean": 0.8939204741223457,
+    "accuracy_std": 0.01794381626262143,
+    "precision_mean": 0.9715571169805486,
+    "precision_std": 0.015421944945515284,
+    "recall_mean": 0.8839976095120063,
+    "recall_std": 0.03522964027893221,
+    "f1_mean": 0.9251899953745181,
+    "f1_std": 0.01479937185837722,
+    "far_mean": 0.11600239048799366,
+    "far_std": 0.03522964027893222,
+    "frr_mean": 0.09633285912989802,
+    "frr_std": 0.09997597557313768,
+    "eer_mean": 0.10070923993146494,
+    "eer_std": 0.03516025621366437,
+    "roc_auc_mean": 0.9634344769082226,
+    "roc_auc_std": 0.021424729263861634,
+    "apcer_mean": 0.11600239048799366,
+    "apcer_std": 0.03522964027893222,
+    "bpcer_mean": 0.09633285912989802,
+    "bpcer_std": 0.09997597557313768,
+    "acer_mean": 0.10616762480894584,
+    "acer_std": 0.040612853700158685,
+    "threshold_mean": 0.8959825717099165,
+    "threshold_std": 0.049144891336675295,
+    "training_seconds_mean": 568.1297424599994,
+    "training_seconds_std": 53.34896677145618,
+    "best_c": "1.0",
+    "best_gamma": "scale",
+    "best_c_selections": "{\"1.0\": 5}",
+    "best_gamma_selections": "{\"scale\": 5}",
+    "total_samples": 3137,
+    "genuine_samples": 797,
+    "spoof_samples": 2340
+  },
+  "pooled_test_confusion_matrix_labels_genuine_attack": [
+    [
+      733,
+      64
+    ],
+    [
+      263,
+      2077
+    ]
+  ],
+  "fold_test_metrics": [
+    {
+      "accuracy": 0.8881685575364667,
+      "apcer": 0.08108108108108109,
+      "bpcer": 0.2727272727272727,
+      "far": 0.08108108108108109,
+      "frr": 0.2727272727272727,
+      "acer": 0.1769041769041769,
+      "eer": 0.16161616161616163,
+      "precision": 0.9463220675944334,
+      "recall": 0.918918918918919,
+      "f1": 0.9324191968658179,
+      "roc_auc": 0.9265434265434265,
+      "confusion_matrix": [
+        [
+          72,
+          27
+        ],
+        [
+          42,
+          476
+        ]
+      ],
+      "dataset_name": "ROSE-Youtu face PAD",
+      "model": "SVM RBF + COMBINED",
+      "feature_set": "combined",
+      "outer_fold": 1,
+      "test_subjects": "7,10,15,23",
+      "validation_subjects": "2,6,20",
+      "train_subjects": "3,4,5,9,11,12,13,14,18,21,22",
+      "validation_accuracy": 0.9203703703703704,
+      "threshold": 0.8644252473243106,
+      "best_c": 1.0,
+      "best_gamma": "scale",
+      "cv_balanced_accuracy": 0.87919988909274,
+      "training_seconds": 640.078874800005,
+      "n_test_videos": 617,
+      "n_test_genuine": 99,
+      "n_test_spoof": 518,
+      "feature_dimensions": 1774,
+      "smoke_test": false
+    },
+    {
+      "accuracy": 0.9025069637883009,
+      "apcer": 0.11946050096339114,
+      "bpcer": 0.04020100502512563,
+      "far": 0.11946050096339114,
+      "frr": 0.04020100502512563,
+      "acer": 0.07983075299425839,
+      "eer": 0.07707129094412331,
+      "precision": 0.9827956989247312,
+      "recall": 0.8805394990366089,
+      "f1": 0.9288617886178862,
+      "roc_auc": 0.9774062993193326,
+      "confusion_matrix": [
+        [
+          191,
+          8
+        ],
+        [
+          62,
+          457
+        ]
+      ],
+      "dataset_name": "ROSE-Youtu face PAD",
+      "model": "SVM RBF + COMBINED",
+      "feature_set": "combined",
+      "outer_fold": 2,
+      "test_subjects": "3,11,12,18",
+      "validation_subjects": "5,7,10,15",
+      "train_subjects": "2,4,6,9,13,14,20,21,22,23",
+      "validation_accuracy": 0.9127725856697819,
+      "threshold": 0.9485709639015661,
+      "best_c": 1.0,
+      "best_gamma": "scale",
+      "cv_balanced_accuracy": 0.8338649130823456,
+      "training_seconds": 491.0421602000133,
+      "n_test_videos": 718,
+      "n_test_genuine": 199,
+      "n_test_spoof": 519,
+      "feature_dimensions": 1774,
+      "smoke_test": false
+    },
+    {
+      "accuracy": 0.8870370370370371,
+      "apcer": 0.1329923273657289,
+      "bpcer": 0.06040268456375839,
+      "far": 0.1329923273657289,
+      "frr": 0.06040268456375839,
+      "acer": 0.09669750596474365,
+      "eer": 0.08439897698209718,
+      "precision": 0.9741379310344828,
+      "recall": 0.8670076726342711,
+      "f1": 0.9174560216508796,
+      "roc_auc": 0.9757462366329666,
+      "confusion_matrix": [
+        [
+          140,
+          9
+        ],
+        [
+          52,
+          339
+        ]
+      ],
+      "dataset_name": "ROSE-Youtu face PAD",
+      "model": "SVM RBF + COMBINED",
+      "feature_set": "combined",
+      "outer_fold": 3,
+      "test_subjects": "2,4,20",
+      "validation_subjects": "7,9,18,23",
+      "train_subjects": "3,5,6,10,11,12,13,14,15,21,22",
+      "validation_accuracy": 0.8938714499252616,
+      "threshold": 0.8867091828544407,
+      "best_c": 1.0,
+      "best_gamma": "scale",
+      "cv_balanced_accuracy": 0.8585170673253072,
+      "training_seconds": 557.7108601999935,
+      "n_test_videos": 540,
+      "n_test_genuine": 149,
+      "n_test_spoof": 391,
+      "feature_dimensions": 1774,
+      "smoke_test": false
+    },
+    {
+      "accuracy": 0.9196675900277008,
+      "apcer": 0.08237547892720307,
+      "bpcer": 0.075,
+      "far": 0.08237547892720307,
+      "frr": 0.075,
+      "acer": 0.07868773946360152,
+      "eer": 0.08045977011494253,
+      "precision": 0.9696356275303644,
+      "recall": 0.9176245210727969,
+      "f1": 0.9429133858267716,
+      "roc_auc": 0.9747413793103448,
+      "confusion_matrix": [
+        [
+          185,
+          15
+        ],
+        [
+          43,
+          479
+        ]
+      ],
+      "dataset_name": "ROSE-Youtu face PAD",
+      "model": "SVM RBF + COMBINED",
+      "feature_set": "combined",
+      "outer_fold": 4,
+      "test_subjects": "6,9,13,22",
+      "validation_subjects": "4,5,7,14",
+      "train_subjects": "2,3,10,11,12,15,18,20,21,23",
+      "validation_accuracy": 0.9266187050359712,
+      "threshold": 0.8365110069154429,
+      "best_c": 1.0,
+      "best_gamma": "scale",
+      "cv_balanced_accuracy": 0.8202479078898385,
+      "training_seconds": 580.1337865999958,
+      "n_test_videos": 722,
+      "n_test_genuine": 200,
+      "n_test_spoof": 522,
+      "feature_dimensions": 1774,
+      "smoke_test": false
+    },
+    {
+      "accuracy": 0.8722222222222222,
+      "apcer": 0.1641025641025641,
+      "bpcer": 0.03333333333333333,
+      "far": 0.1641025641025641,
+      "frr": 0.03333333333333333,
+      "acer": 0.09871794871794871,
+      "eer": 0.1,
+      "precision": 0.9848942598187311,
+      "recall": 0.8358974358974359,
+      "f1": 0.9042995839112344,
+      "roc_auc": 0.9627350427350427,
+      "confusion_matrix": [
+        [
+          145,
+          5
+        ],
+        [
+          64,
+          326
+        ]
+      ],
+      "dataset_name": "ROSE-Youtu face PAD",
+      "model": "SVM RBF + COMBINED",
+      "feature_set": "combined",
+      "outer_fold": 5,
+      "test_subjects": "5,14,21",
+      "validation_subjects": "3,12,13,18",
+      "train_subjects": "2,4,6,7,9,10,11,15,20,22,23",
+      "validation_accuracy": 0.9195561719833565,
+      "threshold": 0.9436964575538219,
+      "best_c": 1.0,
+      "best_gamma": "scale",
+      "cv_balanced_accuracy": 0.8557765104316674,
+      "training_seconds": 571.6830304999894,
+      "n_test_videos": 540,
+      "n_test_genuine": 150,
+      "n_test_spoof": 390,
+      "feature_dimensions": 1774,
+      "smoke_test": false
+    }
+  ]
+}

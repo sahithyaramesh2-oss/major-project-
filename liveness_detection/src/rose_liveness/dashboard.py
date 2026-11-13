@@ -145,7 +145,7 @@ def generate_dashboard(inventory: pd.DataFrame, results_dir: str | Path) -> Path
         best_label = f"{best.dataset_name} / {str(best.feature_set).upper()}"
         subtitle = (
             "Video-level evaluation of the same scaled RBF SVM across the available "
-            "face-feature representations. Each plotted prediction comes from a held-out test subject."
+            "face-feature representations. Each plotted prediction comes from a held-out subject fold."
         )
         notice_text = (
             "Subject-disjoint local evaluation; not an official benchmark claim. "
@@ -153,8 +153,9 @@ def generate_dashboard(inventory: pd.DataFrame, results_dir: str | Path) -> Path
             "The published protocol requires dataset partitions not established by this local run."
         )
         protocol_text = (
-            "Each available subject is held out once for testing; a different subject is used for "
-            "validation and all other subjects are used for training. Grouped cross-validation, "
+            "Five grouped outer folds hold each subject out once for testing. A separate set of "
+            "outer-training subjects is used for validation; the remaining subjects are used for "
+            "training. Grouped cross-validation, "
             "scaling, and hyperparameter selection use training subjects only. The validation "
             "subject selects the fixed operating threshold. Class 0 is genuine/live; class 1 is "
             "spoof/attack. FAR equals APCER and FRR equals BPCER under these definitions."
@@ -288,7 +289,7 @@ def generate_dashboard(inventory: pd.DataFrame, results_dir: str | Path) -> Path
     <div class="eyebrow">Lowest mean fold ACER</div>
     <div class="best-name">{html.escape(best_label)}</div>
     <p>Accuracy {_percent(best.accuracy_mean)} · APCER {_percent(best.apcer_mean)} · BPCER {_percent(best.bpcer_mean)} · EER {_percent(best.eer_mean)} · ROC-AUC {best.roc_auc_mean:.4f}</p>
-    <p>Ranked by validation-threshold fixed operating ACER across held-out subjects. EER is calculated retrospectively from continuous video scores.</p>
+    <p>Ranked by validation-threshold fixed operating ACER across held-out test folds. EER is calculated retrospectively from continuous video scores.</p>
   </section>
   <section>
     <h2>Model comparison</h2>
